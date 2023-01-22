@@ -14,7 +14,7 @@ class DatabaseUtils(vertx: Vertx) {
         dbClient = MongoClient.createShared(vertx, config)
     }
 
-    fun getClient() = dbClient
+    private fun getClient() = dbClient
 
     fun save(collection: String, document: JsonObject, success: () -> Unit, fail: (throwable: Throwable) -> Unit) {
         getClient().save(collection, document) {
@@ -79,10 +79,10 @@ class DatabaseUtils(vertx: Vertx) {
         success: (result: JsonObject) -> Unit,
         fail: (throwable: Throwable) -> Unit
     ) {
-        getClient().findOneAndDelete(collection, query){
-            if (it.succeeded()){
+        getClient().findOneAndDelete(collection, query) {
+            if (it.succeeded()) {
                 success.invoke(it.result())
-            }else{
+            } else {
                 fail.invoke(it.cause())
             }
         }
