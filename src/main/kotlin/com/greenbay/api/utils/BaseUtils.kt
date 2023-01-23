@@ -61,6 +61,7 @@ class BaseUtils {
             }.putHeader("content-type", "application/json").end(
                 JsonObject.of("code", 543, "message", "Not authorized", "payload", null).encodePrettily()
             )
+            return
         }
 
         fun validateAdminBody(jsonObject: JsonObject): Boolean {

@@ -1,8 +1,10 @@
 package com.greenbay.api.services
 
 import com.greenbay.api.utils.BaseUtils
+import com.greenbay.api.utils.Collections
+import com.greenbay.api.utils.DatabaseUtils
 import io.netty.handler.codec.http.HttpResponseStatus
-import io.netty.handler.codec.http.HttpResponseStatus.OK
+import io.netty.handler.codec.http.HttpResponseStatus.*
 import io.vertx.core.impl.logging.LoggerFactory
 import io.vertx.core.json.JsonObject
 import io.vertx.ext.web.Router
@@ -30,8 +32,79 @@ class HouseService : AdminService() {
                     JsonObject.of("code", 543, "message", "Body is empty", "payload", null)
                         .encodePrettily()
                 )
-            BaseUtils.adminValidation(jwt,rc.response())
+            BaseUtils.adminValidation(jwt, rc.response())
+            val qry = JsonObject.of("houseNo", body.getString("houseNo"))
+            DatabaseUtils(vertx).findOne(Collections.HOUSE_TBL.toString(), qry, JsonObject(), { res ->
+                if (res.isEmpty) {
+                    DatabaseUtils(vertx).save(Collections.HOUSE_TBL.toString(),body,{
+                        rc.response().apply {
+                            statusCode = CREATED.code()
+                            statusMessage = CREATED.reasonPhrase()
+                        }.putHeader("content-type","application/json")
+                            .end(
+                                JsonObject.of(
+                                 "code", CREATED.code(),
+                                    "message","House created successfully",
+                                    "payload","Created successfully"
+                                ).encodePrettily()
+                            )
+                    },{
+                        rc.response().apply {
+                            statusCode = INTERNAL_SERVER_ERROR.code()
+                            statusMessage = INTERNAL_SERVER_ERROR.reasonPhrase()
+                        }.putHeader("content-type","application/json")
+                            .end(
+                                JsonObject.of(
+                                    "code", CREATED.code(),
+                                    "message","Error creating house",
+                                    "payload","Error creating house"
+                                ).encodePrettily()
+                            )
+                    })
+                } else {
+                    rc.response().apply {
+                        statusCode = OK.code()
+                        statusMessage = OK.reasonPhrase()
+                    }.putHeader("content-type", "application/json")
+                        .end(
+                            JsonObject
+                                .of(
+                                    "status",
+                                    CONFLICT,
+                                    "message",
+                                    "House already exist",
+                                    "payload",
+                                    null
+                                )
+                                .encodePrettily()
+                        )
+                }
+            }, {
+                rc.response().apply {
+                    statusCode = INTERNAL_SERVER_ERROR.code()
+                    statusMessage = INTERNAL_SERVER_ERROR.reasonPhrase()
+                }.putHeader("content-type","application/json")
+                    .end(
+                        JsonObject.of(
+                            "code", INTERNAL_SERVER_ERROR.code(),
+                            "message","Error occurred try again",
+                            "payload","Error occurred try again"
+                        ).encodePrettily()
+                    )
+            })
         }
+    }
+
+    private fun getAllHouses(rc: RoutingContext) {
+
+    }
+
+    private fun updateHouse(rc: RoutingContext) {
+
+    }
+
+    private fun deleteHouse(rc: RoutingContext) {
+
     }
 
 
