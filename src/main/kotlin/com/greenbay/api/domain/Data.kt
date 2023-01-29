@@ -24,3 +24,9 @@ data class House(
     val deposit: String,
     val isOccupied: Boolean = false
 )
+data class RefreshToken(
+    val email: String,
+    val token:String,
+    val eta:Long,
+    val issuer:String
+)
