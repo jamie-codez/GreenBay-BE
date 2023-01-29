@@ -64,6 +64,16 @@ class BaseUtils {
             return
         }
 
+        fun userAndAdminValidation(jwt: String,response: HttpServerResponse){
+            if (!isNotNull(jwt)) response.apply {
+                statusCode = HttpResponseStatus.OK.code()
+                statusMessage = HttpResponseStatus.OK.reasonPhrase()
+            }.putHeader("content-type","application/json")
+                .end(JsonObject.of("code",543,"message","Auth key empty","payload",null)
+                    .encodePrettily())
+            return
+        }
+
         fun validateAdminBody(jsonObject: JsonObject): Boolean {
             if (jsonObject.containsKey("firstName")
                 && jsonObject.containsKey("lastName")
@@ -135,6 +145,20 @@ class BaseUtils {
                 throwError(it.message!!)
             })
             return isAdmin
+        }
+        fun verifyIsUserOrAdmin(jwt: String): Boolean {
+            var isUserOrAdmin = false
+            val decodedJWT = JWT.decode(jwt)
+            val verifier = JWT.require(Algorithm.HMAC256(System.getenv("GB_JWT_SECRET"))).build()
+            val email = verifier.verify(decodedJWT).subject
+            val qry = JsonObject.of("email", email)
+            DatabaseUtils(Vertx.vertx()).findOne(Collections.ADMIN_TBL.toString(), qry, JsonObject(), {
+                isUserOrAdmin = it.getJsonArray("roles").contains("ADMIN") || it.getJsonArray("roles").contains("USER")
+            }, {
+                isUserOrAdmin = false
+                throwError(it.message!!)
+            })
+            return isUserOrAdmin
         }
 
         fun isValidJwt(jwt: String): Boolean {

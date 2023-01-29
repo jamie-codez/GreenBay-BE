@@ -36,28 +36,28 @@ class HouseService : AdminService() {
             val qry = JsonObject.of("houseNo", body.getString("houseNo"))
             DatabaseUtils(vertx).findOne(Collections.HOUSE_TBL.toString(), qry, JsonObject(), { res ->
                 if (res.isEmpty) {
-                    DatabaseUtils(vertx).save(Collections.HOUSE_TBL.toString(),body,{
+                    DatabaseUtils(vertx).save(Collections.HOUSE_TBL.toString(), body, {
                         rc.response().apply {
                             statusCode = CREATED.code()
                             statusMessage = CREATED.reasonPhrase()
-                        }.putHeader("content-type","application/json")
-                            .end(
-                                JsonObject.of(
-                                 "code", CREATED.code(),
-                                    "message","House created successfully",
-                                    "payload","Created successfully"
-                                ).encodePrettily()
-                            )
-                    },{
-                        rc.response().apply {
-                            statusCode = INTERNAL_SERVER_ERROR.code()
-                            statusMessage = INTERNAL_SERVER_ERROR.reasonPhrase()
-                        }.putHeader("content-type","application/json")
+                        }.putHeader("content-type", "application/json")
                             .end(
                                 JsonObject.of(
                                     "code", CREATED.code(),
-                                    "message","Error creating house",
-                                    "payload","Error creating house"
+                                    "message", "House created successfully",
+                                    "payload", "Created successfully"
+                                ).encodePrettily()
+                            )
+                    }, {
+                        rc.response().apply {
+                            statusCode = INTERNAL_SERVER_ERROR.code()
+                            statusMessage = INTERNAL_SERVER_ERROR.reasonPhrase()
+                        }.putHeader("content-type", "application/json")
+                            .end(
+                                JsonObject.of(
+                                    "code", CREATED.code(),
+                                    "message", "Error creating house",
+                                    "payload", "Error creating house"
                                 ).encodePrettily()
                             )
                     })
@@ -83,12 +83,12 @@ class HouseService : AdminService() {
                 rc.response().apply {
                     statusCode = INTERNAL_SERVER_ERROR.code()
                     statusMessage = INTERNAL_SERVER_ERROR.reasonPhrase()
-                }.putHeader("content-type","application/json")
+                }.putHeader("content-type", "application/json")
                     .end(
                         JsonObject.of(
                             "code", INTERNAL_SERVER_ERROR.code(),
-                            "message","Error occurred try again",
-                            "payload","Error occurred try again"
+                            "message", "Error occurred try again",
+                            "payload", "Error occurred try again"
                         ).encodePrettily()
                     )
             })
@@ -96,7 +96,19 @@ class HouseService : AdminService() {
     }
 
     private fun getAllHouses(rc: RoutingContext) {
+        val authKey = rc.request().getHeader("Authorization").split(" ")[1]
+        if (BaseUtils.isValidJwt(authKey)) {
+            BaseUtils.verifyIsUserOrAdmin(authKey)
 
+        } else {
+            rc.response().apply {
+                statusCode = OK.code()
+                statusMessage = OK.reasonPhrase()
+            }.putHeader("content-type", "application/json")
+                .end(
+                    JsonObject.of("code", 543, "message", "Error occurred try again", "payload", null).encodePrettily()
+                )
+        }
     }
 
     private fun updateHouse(rc: RoutingContext) {
