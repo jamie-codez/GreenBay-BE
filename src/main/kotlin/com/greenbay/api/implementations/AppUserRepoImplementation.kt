@@ -18,14 +18,26 @@ class AppUserRepoImplementation(vertx: Vertx) :UserRepo {
     }
 
     override suspend fun getAppUsers(pageNumber: Int, pageSize: Int) {
-        TODO("Not yet implemented")
+        databaseUtils.find(Collections.USER_TBL.toString(),JsonObject(),{
+
+        },{
+
+        })
     }
 
     override suspend fun updateAppUser(email: String, appUser: AppUser) {
-        TODO("Not yet implemented")
+        databaseUtils.findOneAndUpdate(Collections.USER_TBL.toString(), JsonObject.of("email",email), JsonObject.mapFrom(appUser),{
+
+        },{
+
+        })
     }
 
     override suspend fun deleteAppUser(appUser: AppUser) {
-        TODO("Not yet implemented")
+        databaseUtils.findOneAndDelete(Collections.USER_TBL.toString(),JsonObject.of("email",appUser.email),{
+
+        },{
+
+        })
     }
 }
