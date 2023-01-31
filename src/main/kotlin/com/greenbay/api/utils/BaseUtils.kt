@@ -13,6 +13,10 @@ import java.util.concurrent.TimeUnit
 
 class BaseUtils {
     companion object {
+
+        const val CONTENT_TYPE = "content-type"
+        const val APPLICATION_JSON = "application/json"
+        const val URL_ENCODED = "url-encoded"
         fun isNotNull(jsonObject: JsonObject): Boolean {
             if (jsonObject.isEmpty) {
                 throwError("json is empty")
@@ -34,45 +38,6 @@ class BaseUtils {
             throw GreenBayException(message)
         }
 
-        fun adminValidation(jwt: String, response: HttpServerResponse) {
-            if (!isNotNull(jwt)) response.apply {
-                statusCode = HttpResponseStatus.OK.code()
-                statusMessage = HttpResponseStatus.OK.reasonPhrase()
-            }.putHeader("content-type", "application/json")
-                .end(
-                    JsonObject.of("code", 543, "message", "Auth key empty", "payload", null)
-                        .encodePrettily()
-                )
-            if (!isValidJwt(jwt)) response.apply {
-                statusCode = HttpResponseStatus.OK.code()
-                statusMessage = HttpResponseStatus.OK.reasonPhrase()
-            }.putHeader("content-type", "application/json").end(
-                JsonObject.of("code", 543, "message", "Invalid auth token", "payload", null).encodePrettily()
-            )
-            if (isExpired(jwt)) response.apply {
-                statusCode = HttpResponseStatus.OK.code()
-                statusMessage = HttpResponseStatus.OK.reasonPhrase()
-            }.putHeader("content-type", "application/json").end(
-                JsonObject.of("code", 543, "message", "Auth token expired", "payload", null).encodePrettily()
-            )
-            if (!verifyIsAdmin(jwt)) response.apply {
-                statusCode = HttpResponseStatus.OK.code()
-                statusMessage = HttpResponseStatus.OK.reasonPhrase()
-            }.putHeader("content-type", "application/json").end(
-                JsonObject.of("code", 543, "message", "Not authorized", "payload", null).encodePrettily()
-            )
-            return
-        }
-
-        fun userAndAdminValidation(jwt: String,response: HttpServerResponse){
-            if (!isNotNull(jwt)) response.apply {
-                statusCode = HttpResponseStatus.OK.code()
-                statusMessage = HttpResponseStatus.OK.reasonPhrase()
-            }.putHeader("content-type","application/json")
-                .end(JsonObject.of("code",543,"message","Auth key empty","payload",null)
-                    .encodePrettily())
-            return
-        }
 
         fun validateAdminBody(jsonObject: JsonObject): Boolean {
             if (jsonObject.containsKey("firstName")
@@ -86,44 +51,6 @@ class BaseUtils {
             }
             return false
         }
-
-        fun getDataFromJwt(jwt: String): HashMap<String, Any> {
-            val decodedJWt = JWT.decode(jwt)
-            val verifier = JWT.require(Algorithm.HMAC256(System.getenv("GB_JWT_SECRET"))).build()
-            val claims = verifier.verify(decodedJWt).claims
-            val expires = verifier.verify(decodedJWt).expiresAt
-            val subject = verifier.verify(decodedJWt).subject
-            val issuedAt = verifier.verify(decodedJWt).issuedAt
-            val issuer = verifier.verify(decodedJWt).issuer
-            val roles = claims["roles"] as List<*>
-            val roleList = ArrayList<String>()
-            roles.forEach {
-                roleList.add(it.toString())
-            }
-            val map = HashMap<String, Any>()
-            map["expires"] = expires
-            map["subject"] = subject
-            map["issuedAt"] = issuedAt
-            map["roles"] = roleList
-            map["issuer"] = issuer
-            return map
-        }
-
-        fun isMine(jwt: String, collection: String, field: String): Boolean {
-            var isMine = false
-            val decodedJWT = JWT.decode(jwt)
-            val verifier = JWT.require(Algorithm.HMAC256(System.getenv("GB_JWT_SECRET"))).build()
-            val email = verifier.verify(decodedJWT).subject
-            val qry = JsonObject.of(field, email)
-            DatabaseUtils(Vertx.vertx()).findOne(collection, qry, JsonObject(), {
-                isMine = it.getString("email") == email
-            }, {
-                isMine = false
-                throwError(it.message!!)
-            })
-            return isMine
-        }
-
 
         fun isExpired(jwt: String): Boolean {
             val decodedJWT = JWT.decode(jwt)
@@ -146,26 +73,26 @@ class BaseUtils {
             })
             return isAdmin
         }
-        fun verifyIsUserOrAdmin(jwt: String): Boolean {
-            var isUserOrAdmin = false
-            val decodedJWT = JWT.decode(jwt)
-            val verifier = JWT.require(Algorithm.HMAC256(System.getenv("GB_JWT_SECRET"))).build()
-            val email = verifier.verify(decodedJWT).subject
-            val qry = JsonObject.of("email", email)
-            DatabaseUtils(Vertx.vertx()).findOne(Collections.ADMIN_TBL.toString(), qry, JsonObject(), {
-                isUserOrAdmin = it.getJsonArray("roles").contains("ADMIN") || it.getJsonArray("roles").contains("USER")
-            }, {
-                isUserOrAdmin = false
-                throwError(it.message!!)
-            })
-            return isUserOrAdmin
+
+        fun decodeJwt(jwt: String): JsonObject {
+            val verifier = JWT.require(Algorithm.HMAC256(System.getenv("GB_JWT_SECRET")))
+                .withIssuer(System.getenv("GB_JWT_ISSUER")).build()
+            val payload: String = verifier.verify(jwt).payload
+            return JsonObject(payload)
         }
+
+        fun checkHasRole(payload: JsonObject, role: String): Boolean =
+            payload.getJsonArray("roles").contains(role)
 
         fun isValidJwt(jwt: String): Boolean {
             val decodedJwt = JWT.decode(jwt)
             val verifier = JWT.require(Algorithm.HMAC256(System.getenv("GB_JWT_SECRET"))).build()
-            return verifier.verify(decodedJwt).issuer == "greenbay.com"
+            return verifier.verify(decodedJwt).issuer == System.getenv("GB_JWT_ISSUER")
         }
+
+        fun getReponse(message: String, payload: JsonObject) = JsonObject.of("message", message, "payload", payload)
+        fun getReponse(message: String) = JsonObject.of("message", message)
+
 
         @JvmStatic
         fun getOkHttpClient(): OkHttpClient {

@@ -16,12 +16,12 @@ class DatabaseUtils(vertx: Vertx) {
 
     private fun getClient() = dbClient
 
-    fun save(collection: String, document: JsonObject, success: () -> Unit, fail: (throwable: Throwable) -> Unit) {
+    fun save(collection: String, document: JsonObject, success: (result:String) -> Unit, fail: (throwable: Throwable) -> Unit) {
         getClient().save(collection, document) {
             if (it.succeeded()) {
-                success.invoke()
+                success(it.result())
             } else {
-                fail.invoke(it.cause())
+                fail(it.cause())
             }
         }
     }
@@ -50,12 +50,13 @@ class DatabaseUtils(vertx: Vertx) {
     ) {
         getClient().find(collection, query) {
             if (it.succeeded()) {
-                success.invoke(it.result())
+                success(it.result())
             } else {
-                fail.invoke(it.cause())
+                fail(it.cause())
             }
         }
     }
+
 
     fun findOneAndUpdate(
         collection: String,

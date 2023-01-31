@@ -7,8 +7,18 @@ data class AppUser(
     val email: String,
     val phone: String,
     val idNumber: String,
-    val roles: List<Role>,
     val password: String
+)
+
+data class Admin(
+    val username: String,
+    val firstName: String,
+    val lastName: String,
+    val email: String,
+    val phone: String,
+    val idNumber: String,
+    val password: String,
+    val roles:List<Role>
 )
 
 data class Role(
@@ -24,9 +34,10 @@ data class House(
     val deposit: String,
     val isOccupied: Boolean = false
 )
+
 data class RefreshToken(
     val email: String,
-    val token:String,
-    val eta:Long,
-    val issuer:String
+    val token: String,
+    val eta: Long,
+    val issuer: String
 )
