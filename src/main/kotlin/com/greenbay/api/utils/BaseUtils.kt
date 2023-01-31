@@ -91,6 +91,7 @@ class BaseUtils {
         }
 
         fun getReponse(message: String, payload: JsonObject) = JsonObject.of("message", message, "payload", payload)
+        fun getReponse(message: String, payload: List<JsonObject>) = JsonObject.of("message", message, "payload", payload)
         fun getReponse(message: String) = JsonObject.of("message", message)
 
 
