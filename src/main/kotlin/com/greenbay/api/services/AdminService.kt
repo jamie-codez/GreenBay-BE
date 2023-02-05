@@ -4,7 +4,7 @@ import com.greenbay.api.utils.BaseUtils.Companion.APPLICATION_JSON
 import com.greenbay.api.utils.BaseUtils.Companion.CONTENT_TYPE
 import com.greenbay.api.utils.BaseUtils.Companion.execute
 import com.greenbay.api.utils.BaseUtils.Companion.getResponse
-import com.greenbay.api.utils.Enums
+import com.greenbay.api.utils.Collections
 import io.netty.handler.codec.http.HttpResponseStatus.*
 import io.vertx.core.impl.logging.LoggerFactory
 import io.vertx.core.json.JsonObject
@@ -24,7 +24,7 @@ open class AdminService : BaseService() {
     private fun registerAdmin(rc: RoutingContext) {
         logger.info("registerAdmin() -->")
         execute("registerAdmin", rc, { usr, body, response ->
-            getDatabase().save(Enums.ADMIN_TBL.toString(), body, {
+            getDatabase().save(Collections.ADMIN_TBL.toString(), body, {
                 response.apply {
                     statusCode = CREATED.code()
                     statusMessage = CREATED.reasonPhrase()
@@ -43,7 +43,7 @@ open class AdminService : BaseService() {
     private fun getAllAdmin(rc: RoutingContext) {
         logger.info("getAllAdmin() -->")
         execute("getAllAdmin", rc, { usr, body, response ->
-            getDatabase().find(Enums.ADMIN_TBL.toString(), JsonObject(), {
+            getDatabase().find(Collections.ADMIN_TBL.toString(), JsonObject(), {
                 response.apply {
                     statusCode = CREATED.code()
                     statusMessage = CREATED.reasonPhrase()
@@ -66,7 +66,7 @@ open class AdminService : BaseService() {
             val qry = JsonObject.of("email",email)
             val replacement = JsonObject.of("\$set",body)
 
-            getDatabase().findOneAndUpdate(Enums.ADMIN_TBL.toString(),qry,replacement,{
+            getDatabase().findOneAndUpdate(Collections.ADMIN_TBL.toString(),qry,replacement,{
                 response.apply {
                     statusCode = OK.code()
                     statusMessage = OK.reasonPhrase()
@@ -88,7 +88,7 @@ open class AdminService : BaseService() {
         execute("deleteAdmin",rc,{usr, body, response ->
             val email = rc.request().getParam("email")
             val qry = JsonObject.of("email",email)
-            getDatabase().findOneAndDelete(Enums.ADMIN_TBL.toString(),qry,{
+            getDatabase().findOneAndDelete(Collections.ADMIN_TBL.toString(),qry,{
                 response.apply {
                     statusCode = OK.code()
                     statusMessage = OK.reasonPhrase()

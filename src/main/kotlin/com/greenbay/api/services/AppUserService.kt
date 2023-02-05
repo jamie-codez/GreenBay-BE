@@ -2,7 +2,7 @@ package com.greenbay.api.services
 
 import com.greenbay.api.utils.BaseUtils
 import com.greenbay.api.utils.BaseUtils.Companion.execute
-import com.greenbay.api.utils.Enums
+import com.greenbay.api.utils.Collections
 import io.netty.handler.codec.http.HttpResponseStatus.*
 import io.vertx.core.impl.logging.LoggerFactory
 import io.vertx.core.json.JsonObject
@@ -22,7 +22,7 @@ open class AppUserService : AdminService() {
     private fun createUser(rc: RoutingContext) {
         logger.info("createUser() -->")
         execute("createUser", rc, { usr, body, response ->
-            getDatabase().save(Enums.USER_TBL.toString(), body, {
+            getDatabase().save(Collections.USER_TBL.toString(), body, {
                 logger.error("[createUser]")
                 response.apply {
                     statusCode = CREATED.code()
@@ -43,7 +43,7 @@ open class AppUserService : AdminService() {
     private fun getUsers(rc: RoutingContext) {
         logger.info("getUsers() -->")
         execute("getUsers", rc, { usr, body, response ->
-            getDatabase().find(Enums.USER_TBL.toString(), JsonObject(), {
+            getDatabase().find(Collections.USER_TBL.toString(), JsonObject(), {
                 logger.error("[updateUser]")
                 response.apply {
                     statusCode = OK.code()
@@ -66,7 +66,7 @@ open class AppUserService : AdminService() {
             val email = rc.request().getParam("email")
             val qry = JsonObject.of("email", email)
             val replacement = JsonObject.of("\$set", body)
-            getDatabase().findOneAndUpdate(Enums.USER_TBL.toString(), qry, replacement, {
+            getDatabase().findOneAndUpdate(Collections.USER_TBL.toString(), qry, replacement, {
                 logger.error("[updateUser]")
                 response.apply {
                     statusCode = OK.code()
@@ -88,7 +88,7 @@ open class AppUserService : AdminService() {
         execute("deleteUser", rc, { usr, body, response ->
             val email = rc.request().getParam("email")
             val qry = JsonObject.of("email",email)
-            getDatabase().findOneAndDelete(Enums.USER_TBL.toString(),qry,{
+            getDatabase().findOneAndDelete(Collections.USER_TBL.toString(),qry,{
                 logger.error("[deleteUser]")
                 response.apply {
                     statusCode = OK.code()

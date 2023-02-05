@@ -68,7 +68,7 @@ class BaseUtils {
             val verifier = JWT.require(Algorithm.HMAC256(System.getenv("GB_JWT_SECRET"))).build()
             val email = verifier.verify(decodedJWT).subject
             val qry = JsonObject.of("email", email)
-            DatabaseUtils(Vertx.vertx()).findOne(Enums.ADMIN_TBL.toString(), qry, JsonObject(), {
+            DatabaseUtils(Vertx.vertx()).findOne(Collections.ADMIN_TBL.toString(), qry, JsonObject(), {
                 isAdmin = it.getJsonArray("roles").contains("ADMIN")
             }, {
                 isAdmin = false

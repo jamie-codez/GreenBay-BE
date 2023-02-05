@@ -2,7 +2,7 @@ package com.greenbay.api.services
 
 import com.greenbay.api.utils.BaseUtils
 import com.greenbay.api.utils.BaseUtils.Companion.execute
-import com.greenbay.api.utils.Enums
+import com.greenbay.api.utils.Collections
 import io.netty.handler.codec.http.HttpResponseStatus.*
 import io.vertx.core.impl.logging.LoggerFactory
 import io.vertx.core.json.JsonObject
@@ -21,7 +21,7 @@ open class HouseService : AppUserService() {
 
     private fun createHouse(rc: RoutingContext) {
         execute("addHouse", rc, { usr, body, response ->
-            getDatabase().save(Enums.HOUSE_TBL.toString(), body, {
+            getDatabase().save(Collections.HOUSE_TBL.toString(), body, {
                 response.apply {
                     statusCode = CREATED.code()
                     statusMessage = CREATED.reasonPhrase()
@@ -39,7 +39,7 @@ open class HouseService : AppUserService() {
 
     private fun getAllHouses(rc: RoutingContext) {
         execute("getAllHouses", rc, { usr, body, response ->
-            getDatabase().find(Enums.HOUSE_TBL.toString(), JsonObject(), {
+            getDatabase().find(Collections.HOUSE_TBL.toString(), JsonObject(), {
                 response.apply {
                     statusCode = OK.code()
                     statusMessage = OK.reasonPhrase()
@@ -58,7 +58,7 @@ open class HouseService : AppUserService() {
     private fun updateHouse(rc: RoutingContext) {
         execute("updateHouse", rc, { usr, body, response ->
             getDatabase().findOneAndUpdate(
-                Enums.HOUSE_TBL.toString(),
+                Collections.HOUSE_TBL.toString(),
                 JsonObject.of("_id", body.getString("_id")),
                 body,
                 {
@@ -81,7 +81,7 @@ open class HouseService : AppUserService() {
     private fun deleteHouse(rc: RoutingContext) {
         execute("deleteHouse", rc, { usr, body, response ->
             getDatabase().findOneAndDelete(
-                Enums.HOUSE_TBL.toString(),
+                Collections.HOUSE_TBL.toString(),
                 JsonObject.of("_id", body.getString("_id")),
                 {
                     response.apply {
