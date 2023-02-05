@@ -14,7 +14,7 @@ import io.vertx.ext.web.Router
 import io.vertx.ext.web.RoutingContext
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder
 
-class AuthService : TaskService() {
+open class AuthService : TaskService() {
     private val logger = LoggerFactory.getLogger(this.javaClass.simpleName)
     fun setAuthRoutes(router: Router) {
         router.post("/api/v1/admin/login").handler(::adminLogin)
