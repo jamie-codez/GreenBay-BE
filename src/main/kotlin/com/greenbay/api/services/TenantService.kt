@@ -12,7 +12,7 @@ import io.vertx.core.json.JsonObject
 import io.vertx.ext.web.Router
 import io.vertx.ext.web.RoutingContext
 
-class TenantService : HouseService() {
+open class TenantService : HouseService() {
     private val logger = LoggerFactory.getLogger(this.javaClass.simpleName)
     fun setTenantRoutes(router: Router) {
         router.post("/api/v1/tenants").handler(::createTenant)
