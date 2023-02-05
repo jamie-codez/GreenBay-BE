@@ -11,6 +11,7 @@ import io.vertx.core.json.JsonObject
 import io.vertx.ext.web.RoutingContext
 import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
+import java.util.*
 import java.util.concurrent.TimeUnit
 
 class BaseUtils {
@@ -55,17 +56,31 @@ class BaseUtils {
             return false
         }
 
+        fun generateJwt(email: String): JsonObject {
+            val accessToken = JWT.create().withIssuer(System.getenv("GB_JWT_ISSUER")).withSubject(email)
+                .withExpiresAt(Date(60 * 60 * 24 * 7 * 1000L * System.currentTimeMillis())).sign(
+                    Algorithm.HMAC256(System.getenv("GB_JWT_SECRET"))
+                )
+            val refreshToken = JWT.create().withIssuer(System.getenv("GB_JWT_ISSUER")).withSubject(email)
+                .withExpiresAt(Date(60 * 60 * 24 * 30 * 1000L * System.currentTimeMillis())).sign(
+                    Algorithm.HMAC256(System.getenv("GB_JWT_SECRET"))
+                )
+            return JsonObject.of("access-token", accessToken, "refresh-token", refreshToken)
+        }
+
         fun isExpired(jwt: String): Boolean {
             val decodedJWT = JWT.decode(jwt)
-            val verifier = JWT.require(Algorithm.HMAC256(System.getenv("GB_JWT_SECRET"))).build()
-            val expiresAt = verifier.verify(decodedJWT).expiresAt as Long
-            return System.currentTimeMillis() > expiresAt
+            val verifier = JWT.require(Algorithm.HMAC256(System.getenv("GB_JWT_SECRET")))
+                .withIssuer(System.getenv("GB_JWT_ISSUER")).build()
+            val expiresAt: Date = verifier.verify(decodedJWT).expiresAt
+            return System.currentTimeMillis() > expiresAt.time
         }
 
         fun verifyIsAdmin(jwt: String): Boolean {
             var isAdmin = false
             val decodedJWT = JWT.decode(jwt)
-            val verifier = JWT.require(Algorithm.HMAC256(System.getenv("GB_JWT_SECRET"))).build()
+            val verifier = JWT.require(Algorithm.HMAC256(System.getenv("GB_JWT_SECRET")))
+                .withIssuer(System.getenv("GB_JWT_ISSUER")).build()
             val email = verifier.verify(decodedJWT).subject
             val qry = JsonObject.of("email", email)
             DatabaseUtils(Vertx.vertx()).findOne(Collections.ADMIN_TBL.toString(), qry, JsonObject(), {
