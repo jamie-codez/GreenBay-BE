@@ -12,7 +12,7 @@ import io.vertx.core.json.JsonObject
 import io.vertx.ext.web.Router
 import io.vertx.ext.web.RoutingContext
 
-class CommunicationService:PaymentService() {
+open class CommunicationService:PaymentService() {
     private val logger = LoggerFactory.getLogger(this.javaClass.simpleName)
     fun setCommunicationRoutes(router: Router){
         router.post("/api/v1/communication").handler(::createCommunication)
