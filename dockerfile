@@ -1,7 +1,7 @@
 FROM adoptopenjdk/openjdk14
 
 ENV VERTICLE_HOME /app
-ENV VERTICLE_FILE greenbay_api-v1.0.1-dirty-all.jar
+ENV VERTICLE_FILE greenbay_api-v1.0.1-all.jar
 
 WORKDIR $VERTICLE_HOME
 

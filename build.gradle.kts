@@ -12,14 +12,14 @@ fun getVersionName(): Any {
     return try {
         val stdout = ByteArrayOutputStream()
         exec {
-            commandLine = listOf("git","describe","--tags","--dirty")
+            commandLine = listOf("git","describe","--tags")
             standardOutput = stdout
         }
-//        val list = stdout.toString().split("\n")
-//        list[list.size-1].trim()
-        stdout.toString().trim()
+        val delim = "-"
+        val list: List<String> = stdout.toString().split(delim)
+        list[0]
     }catch (ex:Exception){
-        null!!
+        ""
     }
 }
 
@@ -51,13 +51,13 @@ java{
     sourceCompatibility = JavaVersion.VERSION_1_8
 }
 
-vertx{
-    mainVerticle = "com.greenbay.api.service.GreenBayService"
-}
-
-val mainVerticleName = "com.greenbay.api.service..GreenBayService"
+val mainVerticleName = "com.greenbay.api.services.GreenBayService"
 val watchForChange = "src/**/*.kt"
 val doChange = "${projectDir}/gradlew classes"
+
+vertx{
+    mainVerticle = mainVerticleName
+}
 
 tasks.test {
     useJUnitPlatform()
