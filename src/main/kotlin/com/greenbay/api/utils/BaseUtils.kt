@@ -84,7 +84,7 @@ class BaseUtils {
             val email = verifier.verify(decodedJWT).subject
             val qry = JsonObject.of("email", email)
             DatabaseUtils(Vertx.vertx()).findOne(Collections.ADMIN_TBL.toString(), qry, JsonObject(), {
-                isAdmin = it.getJsonArray("roles").contains("ADMIN")
+                isAdmin = it.getJsonArray("roles").contains("admin")
             }, {
                 isAdmin = false
                 throwError(it.message!!)

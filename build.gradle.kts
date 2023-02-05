@@ -4,6 +4,7 @@ import java.io.ByteArrayOutputStream
 plugins {
     kotlin("jvm") version "1.7.21"
     id("io.vertx.vertx-plugin") version "1.3.0"
+    id("com.github.johnrengelman.shadow") version "7.0.0"
     application
 }
 
@@ -14,6 +15,8 @@ fun getVersionName(): Any {
             commandLine = listOf("git","describe","--tags","--dirty")
             standardOutput = stdout
         }
+//        val list = stdout.toString().split("\n")
+//        list[list.size-1].trim()
         stdout.toString().trim()
     }catch (ex:Exception){
         null!!
