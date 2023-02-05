@@ -11,7 +11,7 @@ import io.vertx.core.json.JsonObject
 import io.vertx.ext.web.Router
 import io.vertx.ext.web.RoutingContext
 
-class PaymentService:TenantService() {
+open class PaymentService:TenantService() {
     private val logger = LoggerFactory.getLogger(this.javaClass.simpleName)
 
     fun setPaymentsRoutes(router: Router){
