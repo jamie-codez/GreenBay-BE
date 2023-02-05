@@ -15,7 +15,8 @@ enum class Collections(private val value: String) {
     USER_ACTIVATION_CODES("user_activation_codes"),
     TASKS("tasks"),
     SCHEDULE("schedules"),
-    REFRESH_TOKEN_TBL("refresh_token");
+    ADMIN_REFRESH_TOKEN_TBL("admin_refresh_token"),
+    USER_REFRESH_TOKEN_TBL("user_refresh_token");
 
     override fun toString(): String {
         return value
