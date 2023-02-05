@@ -6,8 +6,8 @@ import com.greenbay.api.utils.BaseUtils.Companion.execute
 import com.greenbay.api.utils.BaseUtils.Companion.generateJwt
 import com.greenbay.api.utils.BaseUtils.Companion.getResponse
 import com.greenbay.api.utils.Collections
-import io.netty.handler.codec.http.HttpResponseStatus
 import io.netty.handler.codec.http.HttpResponseStatus.*
+import io.vertx.core.buffer.Buffer
 import io.vertx.core.impl.logging.LoggerFactory
 import io.vertx.core.json.JsonObject
 import io.vertx.ext.web.Router
@@ -23,6 +23,10 @@ class AuthService : TaskService() {
         router.get("/api/v1/user/logout/:email").handler(::userLogout)
         router.post("/api/v1/admin/password/reset").handler(::adminPasswordReset)
         router.post("/api/v1/user/password/reset").handler(::userPasswordReset)
+        router.post("/api/v1/admin/reset/password/:email").handler(::resetAdminPassword)
+        router.post("/api/v1/user/reset/password/:email").handler(::resetUserPassword)
+        router.post("/api/v1/user/reset/page").handler(::sendPage)
+        router.post("/api/v1/a/admin/reset/page").handler(::sendPage)
         setTaskRoutes(router)
     }
 
@@ -194,13 +198,171 @@ class AuthService : TaskService() {
                 })
         }, "admin", "super-admin")
     }
+    private fun sendPage(rc: RoutingContext) {
+        rc.response().setStatusCode(200).sendFile("src/main/resources/static/passwordreset.html")
+    }
 
     private fun adminPasswordReset(rc: RoutingContext) {
+        val body = rc.body().asJsonObject()
+        getDatabase().findOne(Collections.USER_TBL.toString(),
+            JsonObject().put("email", body.getString("email")),JsonObject(),{
+                if (it.isEmpty) {
+                    rc.response()
+                        .putHeader(CONTENT_TYPE, APPLICATION_JSON)
+                        .setStatusCode(400)
+                        .end(JsonObject().put("message", "Error occurred").encodePrettily())
+                } else {
+                    val encryptedPass = JsonObject()
+                        .put("password", BCryptPasswordEncoder().encode(body.getValue("password").toString()))
+                    getDatabase().findOneAndUpdate(Collections.ADMIN_TBL.toString(),
+                        JsonObject().put("email", body.getString("email")),
+                        JsonObject().put("\$set", encryptedPass),
+                        {
+                            rc.response()
+                                .putHeader("content-type", "application/json")
+                                .setStatusCode(OK.code())
+                                .setStatusMessage(OK.reasonPhrase())
+                                .end(
+                                    getResponse("Password reset successfully").encodePrettily()
+                                )
+                        },{
+                            rc.response()
+                                .putHeader("content-type", "application/json")
+                                .setStatusCode(400)
+                                .end(getResponse("Error occurred try again").encodePrettily())
+                        })
+                }
+            },{
+                rc.response()
+                    .putHeader("content-type", "application/json")
+                    .setStatusCode(INTERNAL_SERVER_ERROR.code())
+                    .setStatusMessage(INTERNAL_SERVER_ERROR.reasonPhrase())
+                    .end(getResponse("Error occurred try again").encodePrettily())
+            })
 
     }
 
     private fun userPasswordReset(rc: RoutingContext) {
+        val email = rc.body().asJsonObject().getString("email")
+        val password = rc.body().asJsonObject().getString("password")
+        getDatabase().findOne(Collections.USER_TBL.toString(),
+            JsonObject().put("email", email),JsonObject(),{
+                if (it.isEmpty) {
+                    rc.response()
+                        .putHeader(CONTENT_TYPE, APPLICATION_JSON)
+                        .setStatusCode(400)
+                        .end(JsonObject().put("message", "Error occurred").encodePrettily())
+                } else {
+                    val encryptedPass = JsonObject()
+                        .put("password", BCryptPasswordEncoder().encode(password).toString())
+                    getDatabase().findOneAndUpdate(Collections.USER_TBL.toString(),
+                        JsonObject().put("email", email),
+                        JsonObject().put("\$set", encryptedPass),
+                        {
+                            rc.response()
+                                .putHeader("content-type", "application/json")
+                                .setStatusCode(OK.code())
+                                .setStatusMessage(OK.reasonPhrase())
+                                .end(
+                                    getResponse("Password reset successfully").encodePrettily()
+                                )
+                        },{
+                            rc.response()
+                                .putHeader("content-type", "application/json")
+                                .setStatusCode(INTERNAL_SERVER_ERROR.code())
+                                .setStatusMessage(INTERNAL_SERVER_ERROR.reasonPhrase())
+                                .end(getResponse("Error occurred try again").encodePrettily())
+                        })
+                }
+            },{
+                rc.response()
+                    .putHeader("content-type", "application/json")
+                    .setStatusCode(INTERNAL_SERVER_ERROR.code())
+                    .setStatusMessage(INTERNAL_SERVER_ERROR.reasonPhrase())
+                    .end(getResponse("Error occurred try again").encodePrettily())
+            })
+    }
 
+    private fun resetUserPassword(rc: RoutingContext) {
+            val reqBody = rc.body().asJsonObject()
+            val email = rc.request().getParam("email")
+            getDatabase().findOne(Collections.USER_TBL.toString(),
+                JsonObject().put("email", email),JsonObject(),{
+                    if (it.isEmpty) {
+                        rc.response()
+                            .putHeader(CONTENT_TYPE, APPLICATION_JSON)
+                            .setStatusCode(400)
+                            .end(JsonObject().put("message", "Error occurred").encodePrettily())
+                    } else {
+                        val encryptedPass = JsonObject()
+                            .put("password", BCryptPasswordEncoder().encode(reqBody.getValue("password").toString()))
+                        getDatabase().findOneAndUpdate(Collections.USER_TBL.toString(),
+                            JsonObject().put("email", email),
+                            JsonObject().put("\$set", encryptedPass),
+                            {
+                                rc.response()
+                                    .putHeader("content-type", "application/json")
+                                    .setStatusCode(OK.code())
+                                    .setStatusMessage(OK.reasonPhrase())
+                                    .end(
+                                        getResponse("Password reset successfully").encodePrettily()
+                                    )
+                            },{
+                                rc.response()
+                                    .putHeader("content-type", "application/json")
+                                    .setStatusCode(400)
+                                    .end(getResponse("Error occurred try again").encodePrettily())
+                            })
+                    }
+                },{
+                    rc.response()
+                        .putHeader("content-type", "application/json")
+                        .setStatusCode(INTERNAL_SERVER_ERROR.code())
+                        .setStatusMessage(INTERNAL_SERVER_ERROR.reasonPhrase())
+                        .end(getResponse("Error occurred try again").encodePrettily())
+                })
+    }
+
+    private fun resetAdminPassword(rc: RoutingContext) {
+        rc.request().bodyHandler { handler: Buffer ->
+            val reqBody = handler.toJsonObject()
+            val email = rc.request().getParam("email")
+            getDatabase().findOne(Collections.ADMIN_TBL.toString(),
+                JsonObject().put("email", email),JsonObject(),{
+                    if (it.isEmpty) {
+                        rc.response()
+                            .putHeader(CONTENT_TYPE, APPLICATION_JSON)
+                            .setStatusCode(400)
+                            .end(JsonObject().put("message", "Error occurred").encodePrettily())
+                    } else {
+                        val encryptedPass = JsonObject()
+                            .put("password", BCryptPasswordEncoder().encode(reqBody.getValue("password").toString()))
+                        getDatabase().findOneAndUpdate(Collections.ADMIN_TBL.toString(),
+                            JsonObject().put("email", email),
+                            JsonObject().put("\$set", encryptedPass),
+                            {
+                                rc.response()
+                                    .putHeader("content-type", "application/json")
+                                    .setStatusCode(OK.code())
+                                    .setStatusMessage(OK.reasonPhrase())
+                                    .end(
+                                        getResponse("Password reset successfully").encodePrettily()
+                                    )
+                            },{
+                                rc.response()
+                                    .putHeader("content-type", "application/json")
+                                    .setStatusCode(400)
+                                    .end(getResponse("Error occurred try again").encodePrettily())
+                            })
+                    }
+                },{
+                    rc.response()
+                        .putHeader("content-type", "application/json")
+                        .setStatusCode(INTERNAL_SERVER_ERROR.code())
+                        .setStatusMessage(INTERNAL_SERVER_ERROR.reasonPhrase())
+                        .end(getResponse("Error occurred try again").encodePrettily())
+                })
+        }
     }
 
 
