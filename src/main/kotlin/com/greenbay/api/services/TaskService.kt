@@ -9,7 +9,7 @@ import io.vertx.core.json.JsonObject
 import io.vertx.ext.web.Router
 import io.vertx.ext.web.RoutingContext
 
-class TaskService:CommunicationService() {
+open class TaskService:CommunicationService() {
     private val logger = LoggerFactory.getLogger(this.javaClass.simpleName)
     fun setTaskRoutes(router: Router){
         router.post("/api/v1/task").handler(::createTask)
