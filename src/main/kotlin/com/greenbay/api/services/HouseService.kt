@@ -11,7 +11,7 @@ import io.vertx.core.json.JsonObject
 import io.vertx.ext.web.Router
 import io.vertx.ext.web.RoutingContext
 
-class HouseService : AdminService() {
+class HouseService : AppUserService() {
     private val logger = LoggerFactory.getLogger(this.javaClass.simpleName)
 
     fun setHouseRoutes(router: Router) {
@@ -23,7 +23,7 @@ class HouseService : AdminService() {
 
     private fun createHouse(rc: RoutingContext) {
         execute("addHouse", rc, { usr, body, response ->
-            DatabaseUtils(vertx).save(Collections.HOUSE_TBL.toString(), body, {
+            getDatabase().save(Collections.HOUSE_TBL.toString(), body, {
                 response.apply {
                     statusCode = CREATED.code()
                     statusMessage = CREATED.reasonPhrase()
@@ -41,7 +41,7 @@ class HouseService : AdminService() {
 
     private fun getAllHouses(rc: RoutingContext) {
         execute("getAllHouses", rc, { usr, body, response ->
-            DatabaseUtils(vertx).find(Collections.HOUSE_TBL.toString(), JsonObject(), {
+            getDatabase().find(Collections.HOUSE_TBL.toString(), JsonObject(), {
                 response.apply {
                     statusCode = OK.code()
                     statusMessage = OK.reasonPhrase()
@@ -59,7 +59,7 @@ class HouseService : AdminService() {
 
     private fun updateHouse(rc: RoutingContext) {
         execute("updateHouse", rc, { usr, body, response ->
-            DatabaseUtils(vertx).findOneAndUpdate(
+            getDatabase().findOneAndUpdate(
                 Collections.HOUSE_TBL.toString(),
                 JsonObject.of("_id", body.getString("_id")),
                 body,
@@ -82,7 +82,7 @@ class HouseService : AdminService() {
 
     private fun deleteHouse(rc: RoutingContext) {
         execute("deleteHouse", rc, { usr, body, response ->
-            DatabaseUtils(vertx).findOneAndDelete(
+            getDatabase().findOneAndDelete(
                 Collections.HOUSE_TBL.toString(),
                 JsonObject.of("_id", body.getString("_id")),
                 {

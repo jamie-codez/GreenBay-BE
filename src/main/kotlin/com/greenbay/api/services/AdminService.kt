@@ -19,14 +19,16 @@ open class AdminService : BaseService() {
     private val logger = LoggerFactory.getLogger(this.javaClass.simpleName)
 
     fun setAdminRoutes(router: Router) {
-        router.post("/api/v1/admin/register").handler(this::registerAdmin)
-        router.get("/api/v1/admin").handler(this::getAllAdmin)
+        router.post("/api/v1/admin/").handler(::registerAdmin)
+        router.get("/api/v1/admin").handler(::getAllAdmin)
+        router.put("/api/v1/admin/").handler(::updateAdmin)
+        router.delete("/api/v1/admin").handler(::deleteAdmin)
     }
 
     private fun registerAdmin(rc: RoutingContext) {
         logger.info("registerAdmin() -->")
         execute("registerAdmin", rc, { usr, body, response ->
-            DatabaseUtils(vertx).save(Collections.ADMIN_TBL.toString(), body, {
+            getDatabase().save(Collections.ADMIN_TBL.toString(), body, {
                 response.apply {
                     statusCode = CREATED.code()
                     statusMessage = CREATED.reasonPhrase()
@@ -45,7 +47,7 @@ open class AdminService : BaseService() {
     private fun getAllAdmin(rc: RoutingContext) {
         logger.info("getAllAdmin() -->")
         execute("getAllAdmin", rc, { usr, body, response ->
-            DatabaseUtils(vertx).find(Collections.ADMIN_TBL.toString(), JsonObject(), {
+            getDatabase().find(Collections.ADMIN_TBL.toString(), JsonObject(), {
                 response.apply {
                     statusCode = CREATED.code()
                     statusMessage = CREATED.reasonPhrase()
@@ -61,5 +63,50 @@ open class AdminService : BaseService() {
         }, "admin", "super-admin")
     }
 
+    private fun updateAdmin(rc: RoutingContext){
+        logger.info("updateAdmin() -->")
+        execute("updateAdmin",rc,{usr, body, response ->
+            val email = rc.request().getParam("email")
+            val qry = JsonObject.of("email",email)
+            val replacement = JsonObject.of("\$set",body)
+
+            getDatabase().findOneAndUpdate(Collections.ADMIN_TBL.toString(),qry,replacement,{
+                response.apply {
+                    statusCode = OK.code()
+                    statusMessage = OK.reasonPhrase()
+                }.putHeader(CONTENT_TYPE, APPLICATION_JSON)
+                    .end(getResponse("Updated successfully",it).encodePrettily())
+            },{
+                logger.error("[updateAdmin] ${it.message}")
+                response.apply {
+                    statusCode = INTERNAL_SERVER_ERROR.code()
+                    statusMessage = INTERNAL_SERVER_ERROR.reasonPhrase()
+                }.putHeader(CONTENT_TYPE, APPLICATION_JSON)
+                    .end(getResponse("Error occurred try again").encodePrettily())
+            })
+        },"admin","super-admin")
+    }
+
+    private fun deleteAdmin(rc:RoutingContext){
+        logger.info("deleteAdmin() -->")
+        execute("deleteAdmin",rc,{usr, body, response ->
+            val email = rc.request().getParam("email")
+            val qry = JsonObject.of("email",email)
+            getDatabase().findOneAndDelete(Collections.ADMIN_TBL.toString(),qry,{
+                response.apply {
+                    statusCode = OK.code()
+                    statusMessage = OK.reasonPhrase()
+                }.putHeader(CONTENT_TYPE, APPLICATION_JSON)
+                    .end(getResponse("Deleted successfully").encodePrettily())
+            },{
+                logger.error("[deleteAdmin] ${it.message}")
+                response.apply {
+                    statusCode = INTERNAL_SERVER_ERROR.code()
+                    statusMessage = INTERNAL_SERVER_ERROR.reasonPhrase()
+                }.putHeader(CONTENT_TYPE, APPLICATION_JSON)
+                    .end(getResponse("Error occurred try again").encodePrettily())
+            })
+        },"super-admin")
+    }
 
 }
