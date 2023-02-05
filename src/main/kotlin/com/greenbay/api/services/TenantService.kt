@@ -4,105 +4,108 @@ import com.greenbay.api.utils.BaseUtils.Companion.APPLICATION_JSON
 import com.greenbay.api.utils.BaseUtils.Companion.CONTENT_TYPE
 import com.greenbay.api.utils.BaseUtils.Companion.execute
 import com.greenbay.api.utils.BaseUtils.Companion.getResponse
-import com.greenbay.api.utils.Enums
+import com.greenbay.api.utils.Collections
 import io.netty.handler.codec.http.HttpResponseStatus.*
 import io.vertx.core.impl.logging.LoggerFactory
+import io.vertx.core.json.Json
 import io.vertx.core.json.JsonObject
 import io.vertx.ext.web.Router
 import io.vertx.ext.web.RoutingContext
 
-open class AdminService : BaseService() {
+class TenantService : HouseService() {
     private val logger = LoggerFactory.getLogger(this.javaClass.simpleName)
-
-    fun setAdminRoutes(router: Router) {
-        router.post("/api/v1/admin/").handler(::registerAdmin)
-        router.get("/api/v1/admin").handler(::getAllAdmin)
-        router.put("/api/v1/admin/:email").handler(::updateAdmin)
-        router.delete("/api/v1/admin/:email").handler(::deleteAdmin)
+    fun setTenantRoutes(router: Router) {
+        router.post("/api/v1/tenants").handler(::createTenant)
+        router.get("/api/v1/tenants").handler(::getAllTenants)
+        router.put("/api/v1/tenants/:email").handler(::updateTenant)
+        router.delete("/api/v1/tenants/:email").handler(::deleteTenant)
+        setHouseRoutes(router)
     }
 
-    private fun registerAdmin(rc: RoutingContext) {
-        logger.info("registerAdmin() -->")
-        execute("registerAdmin", rc, { usr, body, response ->
-            getDatabase().save(Enums.ADMIN_TBL.toString(), body, {
+    private fun createTenant(rc: RoutingContext) {
+        logger.info("createTenant() -->")
+        execute("createTenant", rc, { usr, body, response ->
+            getDatabase().save(Collections.TENANTS.toString(), body, {
+                logger.info("[createTenant]")
                 response.apply {
                     statusCode = CREATED.code()
                     statusMessage = CREATED.reasonPhrase()
                 }.putHeader(CONTENT_TYPE, APPLICATION_JSON)
-                    .end(getResponse("Admin created successfully").encodePrettily())
+                    .end(getResponse("Tenant created successfully").encodePrettily())
             }, {
+                logger.error("[createTenant] ${it.message}")
                 response.apply {
                     statusCode = INTERNAL_SERVER_ERROR.code()
                     statusMessage = INTERNAL_SERVER_ERROR.reasonPhrase()
                 }.putHeader(CONTENT_TYPE, APPLICATION_JSON)
-                    .end(getResponse("Error creating admin try again").encodePrettily())
-            })
-        }, "super-admin")
-    }
-
-    private fun getAllAdmin(rc: RoutingContext) {
-        logger.info("getAllAdmin() -->")
-        execute("getAllAdmin", rc, { usr, body, response ->
-            getDatabase().find(Enums.ADMIN_TBL.toString(), JsonObject(), {
-                response.apply {
-                    statusCode = CREATED.code()
-                    statusMessage = CREATED.reasonPhrase()
-                }.putHeader(CONTENT_TYPE, APPLICATION_JSON)
-                    .end(getResponse("Success", it).encodePrettily())
-            }, {
-                response.apply {
-                    statusCode = INTERNAL_SERVER_ERROR.code()
-                    statusMessage = INTERNAL_SERVER_ERROR.reasonPhrase()
-                }.putHeader(CONTENT_TYPE, APPLICATION_JSON)
-                    .end(getResponse("Error occurred try again").encodePrettily())
+                    .end(getResponse("Error creating tenant try again").encodePrettily())
             })
         }, "admin", "super-admin")
     }
 
-    private fun updateAdmin(rc: RoutingContext){
-        logger.info("updateAdmin() -->")
-        execute("updateAdmin",rc,{usr, body, response ->
-            val email = rc.request().getParam("email")
-            val qry = JsonObject.of("email",email)
-            val replacement = JsonObject.of("\$set",body)
-
-            getDatabase().findOneAndUpdate(Enums.ADMIN_TBL.toString(),qry,replacement,{
+    private fun getAllTenants(rc: RoutingContext) {
+        execute("getAllTenants",rc,{usr, body, response ->
+            getDatabase().find(Collections.TENANTS.toString(), JsonObject(),{
+                logger.info("[createTenant]")
                 response.apply {
                     statusCode = OK.code()
                     statusMessage = OK.reasonPhrase()
                 }.putHeader(CONTENT_TYPE, APPLICATION_JSON)
-                    .end(getResponse("Updated successfully",it).encodePrettily())
+                    .end(getResponse("Successful",it).encodePrettily())
             },{
-                logger.error("[updateAdmin] ${it.message}")
+                logger.error("[createTenant] ${it.message}")
                 response.apply {
                     statusCode = INTERNAL_SERVER_ERROR.code()
                     statusMessage = INTERNAL_SERVER_ERROR.reasonPhrase()
                 }.putHeader(CONTENT_TYPE, APPLICATION_JSON)
-                    .end(getResponse("Error occurred try again").encodePrettily())
+                    .end(getResponse("Error creating tenant try again").encodePrettily())
             })
         },"admin","super-admin")
     }
 
-    private fun deleteAdmin(rc:RoutingContext){
-        logger.info("deleteAdmin() -->")
-        execute("deleteAdmin",rc,{usr, body, response ->
+    private fun updateTenant(rc: RoutingContext) {
+        execute("updateTenant",rc,{usr, body, response ->
             val email = rc.request().getParam("email")
             val qry = JsonObject.of("email",email)
-            getDatabase().findOneAndDelete(Enums.ADMIN_TBL.toString(),qry,{
+            val replacement = JsonObject.of("\$set",body)
+            getDatabase().findOneAndUpdate(Collections.TENANTS.toString(),qry,replacement,{
+                logger.info("[updateTenant]")
                 response.apply {
                     statusCode = OK.code()
                     statusMessage = OK.reasonPhrase()
                 }.putHeader(CONTENT_TYPE, APPLICATION_JSON)
-                    .end(getResponse("Deleted successfully").encodePrettily())
+                    .end(getResponse("Successful",it).encodePrettily())
             },{
-                logger.error("[deleteAdmin] ${it.message}")
+                logger.error("[updateTenant] ${it.message}")
                 response.apply {
                     statusCode = INTERNAL_SERVER_ERROR.code()
                     statusMessage = INTERNAL_SERVER_ERROR.reasonPhrase()
                 }.putHeader(CONTENT_TYPE, APPLICATION_JSON)
-                    .end(getResponse("Error occurred try again").encodePrettily())
+                    .end(getResponse("Error updating tenant try again").encodePrettily())
             })
-        },"super-admin")
+        },"admin","super-admin")
+    }
+
+    private fun deleteTenant(rc: RoutingContext) {
+        execute("deleteTenant",rc,{usr, body, response ->
+            val email = rc.request().getParam("email")
+            val qry = JsonObject.of("email",email)
+            getDatabase().findOneAndDelete(Collections.TENANTS.toString(),qry,{
+                logger.info("[deleteTenant]")
+                response.apply {
+                    statusCode = OK.code()
+                    statusMessage = OK.reasonPhrase()
+                }.putHeader(CONTENT_TYPE, APPLICATION_JSON)
+                    .end(getResponse("Successful",it).encodePrettily())
+            },{
+                logger.error("[deleteTenant] ${it.message}")
+                response.apply {
+                    statusCode = INTERNAL_SERVER_ERROR.code()
+                    statusMessage = INTERNAL_SERVER_ERROR.reasonPhrase()
+                }.putHeader(CONTENT_TYPE, APPLICATION_JSON)
+                    .end(getResponse("Error deleting tenant try again").encodePrettily())
+            })
+        },"admin","super-admin")
     }
 
 }
