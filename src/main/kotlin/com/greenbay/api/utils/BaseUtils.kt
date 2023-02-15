@@ -3,6 +3,7 @@ package com.greenbay.api.utils
 import com.auth0.jwt.JWT
 import com.auth0.jwt.algorithms.Algorithm
 import com.greenbay.api.exception.GreenBayException
+import io.netty.handler.codec.http.HttpResponseStatus
 import io.netty.handler.codec.http.HttpResponseStatus.*
 import io.vertx.core.Vertx
 import io.vertx.core.http.HttpServerResponse
@@ -121,19 +122,19 @@ class BaseUtils {
                     statusCode = BAD_REQUEST.code()
                     statusMessage = BAD_REQUEST.reasonPhrase()
                 }.putHeader(CONTENT_TYPE, APPLICATION_JSON)
-                    .end(getResponse("Invalid access token").encodePrettily())
+                    .end(getResponse(FORBIDDEN.code(), "Invalid access token").encodePrettily())
             } else if (!checkHasRole(payload, *role)) {
                 response.apply {
                     statusCode = FORBIDDEN.code()
                     statusMessage = FORBIDDEN.reasonPhrase()
                 }.putHeader(CONTENT_TYPE, APPLICATION_JSON)
-                    .end(getResponse("Not enough permissions").encodePrettily())
+                    .end(getResponse(UNAUTHORIZED.code(), "Not enough permissions").encodePrettily())
             } else if (isExpired(jwt)) {
                 response.apply {
                     statusCode = BAD_REQUEST.code()
                     statusMessage = BAD_REQUEST.reasonPhrase()
                 }.putHeader(CONTENT_TYPE, APPLICATION_JSON)
-                    .end(getResponse("Access token expired").encodePrettily())
+                    .end(getResponse(UNAUTHORIZED.code(), "Access token expired").encodePrettily())
             } else {
                 task(payload.getString("subject"), response)
             }
@@ -164,7 +165,26 @@ class BaseUtils {
                     statusCode = INTERNAL_SERVER_ERROR.code()
                     statusMessage = INTERNAL_SERVER_ERROR.reasonPhrase()
                 }.putHeader(CONTENT_TYPE, APPLICATION_JSON)
-                    .end(this.getResponse(ex.message!!).encodePrettily())
+                    .end(this.getResponse(INTERNAL_SERVER_ERROR.code(), ex.message!!).encodePrettily())
+            }
+        }
+
+        fun execute2(
+            task: String,
+            requestBody: JsonObject,
+            context: RoutingContext,
+            inject: (usr: JsonObject, body: JsonObject, response: HttpServerResponse) -> Unit,
+            vararg values: String
+        ) {
+            logger.info("execute2($task) -->")
+            val response = context.response().apply {
+                statusCode = OK.code()
+                statusMessage = OK.reasonPhrase()
+            }.putHeader(CONTENT_TYPE, APPLICATION_JSON)
+            try {
+
+            } catch (ex: Exception) {
+                response.end(getResponse(INTERNAL_SERVER_ERROR.code(), ex.message!!).encodePrettily())
             }
         }
 
@@ -182,7 +202,12 @@ class BaseUtils {
                     statusCode = REQUEST_ENTITY_TOO_LARGE.code()
                     statusMessage = REQUEST_ENTITY_TOO_LARGE.reasonPhrase()
                 }.putHeader(CONTENT_TYPE, APPLICATION_JSON)
-                    .end(getResponse("Request body too large: [${requestBody.encodePrettily().length}]").encodePrettily())
+                    .end(
+                        getResponse(
+                            REQUEST_ENTITY_TOO_LARGE.code(),
+                            "Request body too large: [${requestBody.encodePrettily().length}]"
+                        ).encodePrettily()
+                    )
             } else {
                 this.isPermitted(accessToken, *values, response = context.response()) { email, response ->
                     inject(JsonObject.of("email", email), requestBody, response)
@@ -191,11 +216,50 @@ class BaseUtils {
 
         }
 
-        fun getResponse(message: String, payload: JsonObject) = JsonObject.of("message", message, "payload", payload)
-        fun getResponse(message: String, payload: List<JsonObject>) =
+        fun bodyHandler(
+            task: String,
+            requestBody: JsonObject,
+            rc: RoutingContext,
+            inject: (usr: JsonObject, body: JsonObject, response: HttpServerResponse) -> Unit,
+            vararg values: String
+        ) {
+            logger.info("bodyHandler($task) -->")
+            val response = rc.response().apply {
+                statusCode = OK.code()
+                statusMessage = OK.reasonPhrase()
+            }.putHeader(CONTENT_TYPE, APPLICATION_JSON)
+            val bodySize = requestBody.encode().length
+            if (bodySize > BODY_LIMIT) {
+                response.end(
+                    getResponse(
+                        HttpResponseStatus.REQUEST_ENTITY_TOO_LARGE.code()
+                        "Request body too large:[$bodySize]KBs"
+                    ).encodePrettily()
+                )
+            } else {
+
+            }
+        }
+
+        fun hasFields(body: JsonObject, vararg values: String): Boolean {
+            if (values.isEmpty())
+                return true
+            if (body.isEmpty)
+                return false
+            var result = true
+            values.forEach {
+                result = result && body.containsKey(it)
+            }
+            return result
+        }
+
+        fun getResponse(code: Int, message: String, payload: JsonObject) =
             JsonObject.of("message", message, "payload", payload)
 
-        fun getResponse(message: String) = JsonObject.of("message", message)
+        fun getResponse(code: Int, message: String, payload: List<JsonObject>) =
+            JsonObject.of("message", message, "payload", payload)
+
+        fun getResponse(code: Int, message: String) = JsonObject.of("message", message)
 
 
         @JvmStatic
