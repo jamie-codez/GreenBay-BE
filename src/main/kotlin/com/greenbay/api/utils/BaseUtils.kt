@@ -8,6 +8,7 @@ import io.netty.handler.codec.http.HttpResponseStatus.*
 import io.vertx.core.Vertx
 import io.vertx.core.http.HttpServerResponse
 import io.vertx.core.impl.logging.LoggerFactory
+import io.vertx.core.json.JsonArray
 import io.vertx.core.json.JsonObject
 import io.vertx.ext.web.RoutingContext
 import okhttp3.OkHttpClient
@@ -216,7 +217,34 @@ class BaseUtils {
 
         }
 
-        fun bodyHandler(
+        fun noAuthExecute(
+            task: String,
+            rc: RoutingContext,
+            inject: (usr: JsonObject, body: JsonObject, response: HttpServerResponse) -> Unit,
+            values: String
+        ) {
+            val response = rc.response().apply {
+                statusCode = OK.code()
+                statusMessage = OK.reasonPhrase()
+            }.putHeader(CONTENT_TYPE, APPLICATION_JSON)
+            try {
+                noAuthBodyHandler(task,rc.body().asJsonObject(),rc,inject,values)
+            } catch (e: Exception) {
+                response.end(getResponse(INTERNAL_SERVER_ERROR.code(), "Error occurred, try again").encodePrettily())
+            }
+        }
+
+        /**
+         * Body handler method that handles that do not need authentication i.e. login
+         * @param task The action being undertaken
+         * @param requestBody Request body from client
+         * @param rc The routing context in this block
+         * @param inject Code injected
+         * @param values Params to check if fields are present
+         * @author Jamie Omondi
+         * @since 15/02/2023
+         */
+        private fun noAuthBodyHandler(
             task: String,
             requestBody: JsonObject,
             rc: RoutingContext,
@@ -232,15 +260,27 @@ class BaseUtils {
             if (bodySize > BODY_LIMIT) {
                 response.end(
                     getResponse(
-                        HttpResponseStatus.REQUEST_ENTITY_TOO_LARGE.code()
+                        REQUEST_ENTITY_TOO_LARGE.code(),
                         "Request body too large:[$bodySize]KBs"
                     ).encodePrettily()
                 )
             } else {
-
+                if (!hasFields(requestBody,*values)){
+                    response.end(getResponse(BAD_REQUEST.code(),"Some fields are missing").encodePrettily())
+                    return
+                }
+                inject(JsonObject.of("email",requestBody.getString("email")),requestBody,response)
             }
         }
 
+        /**
+         * Checks if the user has the specified role
+         * @param body The role to be confirmed
+         * @param values The fields to be checked in the body
+         * @return State whether the body has those fields
+         * @author Jamie Omondi
+         * @since 15/02/2023
+         */
         fun hasFields(body: JsonObject, vararg values: String): Boolean {
             if (values.isEmpty())
                 return true
@@ -251,6 +291,18 @@ class BaseUtils {
                 result = result && body.containsKey(it)
             }
             return result
+        }
+
+        /**
+         * Checks if the user has the specified role
+         * @param role The role to be confirmed
+         * @param roles The roles of the user
+         * @return State whether that user has those permissions
+         * @author Jamie Omondi
+         * @since 15/02/2023
+         */
+        fun hasPermissions(role: String, roles: JsonArray): Boolean {
+            return roles.contains(role)
         }
 
         fun getResponse(code: Int, message: String, payload: JsonObject) =
