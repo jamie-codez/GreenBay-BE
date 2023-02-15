@@ -16,7 +16,12 @@ class DatabaseUtils(vertx: Vertx) {
 
     private fun getClient() = dbClient
 
-    fun save(collection: String, document: JsonObject, success: (result:String) -> Unit, fail: (throwable: Throwable) -> Unit) {
+    fun save(
+        collection: String,
+        document: JsonObject,
+        success: (result: String) -> Unit,
+        fail: (throwable: Throwable) -> Unit
+    ) {
         getClient().save(collection, document) {
             if (it.succeeded()) {
                 success(it.result())
@@ -88,4 +93,5 @@ class DatabaseUtils(vertx: Vertx) {
             }
         }
     }
+
 }

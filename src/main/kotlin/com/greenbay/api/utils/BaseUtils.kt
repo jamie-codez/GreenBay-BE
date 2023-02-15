@@ -3,7 +3,6 @@ package com.greenbay.api.utils
 import com.auth0.jwt.JWT
 import com.auth0.jwt.algorithms.Algorithm
 import com.greenbay.api.exception.GreenBayException
-import io.netty.handler.codec.http.HttpResponseStatus
 import io.netty.handler.codec.http.HttpResponseStatus.*
 import io.vertx.core.Vertx
 import io.vertx.core.http.HttpServerResponse
@@ -23,6 +22,7 @@ class BaseUtils {
         const val APPLICATION_JSON = "application/json"
         const val BODY_LIMIT = 5_000
         const val URL_ENCODED = "url-encoded"
+        val database = DatabaseUtils(Vertx.vertx())
         fun isNotNull(jsonObject: JsonObject): Boolean {
             if (jsonObject.isEmpty) {
                 throwError("json is empty")
@@ -183,13 +183,89 @@ class BaseUtils {
                 statusMessage = OK.reasonPhrase()
             }.putHeader(CONTENT_TYPE, APPLICATION_JSON)
             try {
-
-                logger.info("executeAuth($task) -->")
+                val accessToken = context.request().getHeader("access-token")
+                authBodyHandler(task, requestBody, accessToken, context, inject, *values)
+                logger.info("executeAuth($task) <--")
             } catch (ex: Exception) {
-                logger.error("executeAuth([${ex.message}]) -->")
+                logger.error("executeAuth([${ex.message}]) <--")
                 response.end(getResponse(INTERNAL_SERVER_ERROR.code(), ex.message!!).encodePrettily())
             }
         }
+
+
+        fun authBodyHandler(
+            task: String,
+            body: JsonObject,
+            accessToken: String,
+            rc: RoutingContext,
+            inject: (usr: JsonObject, body: JsonObject, response: HttpServerResponse) -> Unit,
+            vararg values: String,
+        ) {
+            logger.info("authBodyHandler($task) -->")
+            val response = rc.response().apply {
+                statusCode = OK.code()
+                statusMessage = OK.reasonPhrase()
+            }.putHeader(CONTENT_TYPE, APPLICATION_JSON)
+            val size = body.encode().length
+            if (size > BODY_LIMIT) {
+                response.end(
+                    getResponse(
+                        REQUEST_ENTITY_TOO_LARGE.code(),
+                        "Body too large. [${size / 1025}]"
+                    ).encodePrettily()
+                )
+            } else {
+                if (accessToken.isEmpty()) {
+                    response.end(getResponse(BAD_REQUEST.code(), "Access Token missing").encodePrettily())
+                    return
+                }
+                val claim = decodeJwtToken(accessToken)
+                val email = claim.getString("email")
+                val expires = claim.getString("expires")
+                val jwtRoles = claim.getJsonArray("roles")
+                val now = System.currentTimeMillis()
+                if (now > expires.toLong()) {
+                    response.end(getResponse(UNAUTHORIZED.code(), "Access token expired").encodePrettily())
+                    return
+                }
+                getUser(JsonObject.of("email", email), { usr ->
+                    val userRoles = usr.getJsonArray("roles")
+                    if (!hasFields(body, *values)){
+                        response.end(getResponse(NOT_FOUND.code(),"Some fields missing").encodePrettily())
+                    }
+                    if (!hasPermissions(jwtRoles,userRoles)){
+                        response.end(getResponse(UNAUTHORIZED.code(),"Missing permissions").encodePrettily())
+                    }
+                    inject(usr,body, response)
+                }, response)
+            }
+        }
+
+
+        fun decodeJwtToken(jwt: String): JsonObject {
+            try {
+                val decodedJWT = JWT.decode(jwt)
+                val verifier = JWT.require(Algorithm.HMAC256(System.getenv("GB_JWT_SECRET")))
+                    .withIssuer(System.getenv("GB_JWT_ISSUER")).build()
+                val verifiedJWT = verifier.verify(decodedJWT)
+                val email = verifiedJWT.subject
+                val expires = verifiedJWT.expiresAt
+                val roles = verifiedJWT.claims["roles"]
+                return JsonObject.of("email", email, "expires", expires, "roles", roles)
+            } catch (ex: Exception) {
+                throw GreenBayException(ex.message, ex)
+            }
+        }
+
+        fun getUser(qry: JsonObject, task: (usr: JsonObject) -> Unit, response: HttpServerResponse) {
+            database.findOne(Collections.USER_TBL.toString(), qry, JsonObject(), {
+                task(it)
+            }, {
+                response.end(getResponse(INTERNAL_SERVER_ERROR.code(), "Error occurred try again.").encodePrettily())
+                throw GreenBayException(it.message, it)
+            })
+        }
+
 
         fun bodyHandler(
             task: String,
@@ -231,7 +307,7 @@ class BaseUtils {
                 statusMessage = OK.reasonPhrase()
             }.putHeader(CONTENT_TYPE, APPLICATION_JSON)
             try {
-                noAuthBodyHandler(task,rc.body().asJsonObject(),rc,inject,values)
+                noAuthBodyHandler(task, rc.body().asJsonObject(), rc, inject, values)
                 logger.info("noAuthExecute($task) <--")
             } catch (e: Exception) {
                 logger.error("noAuthExecute(${e.message}) <--")
@@ -272,11 +348,11 @@ class BaseUtils {
                 logger.info("noAuthBodyHandler($task) <--")
 
             } else {
-                if (!hasFields(requestBody,*values)){
-                    response.end(getResponse(BAD_REQUEST.code(),"Some fields are missing").encodePrettily())
+                if (!hasFields(requestBody, *values)) {
+                    response.end(getResponse(BAD_REQUEST.code(), "Some fields are missing").encodePrettily())
                     return
                 }
-                inject(JsonObject.of("email",requestBody.getString("email")),requestBody,response)
+                inject(JsonObject.of("email", requestBody.getString("email")), requestBody, response)
                 logger.info("noAuthBodyHandler($task) <--")
             }
         }
@@ -309,8 +385,12 @@ class BaseUtils {
          * @author Jamie Omondi
          * @since 15/02/2023
          */
-        fun hasPermissions(role: String, roles: JsonArray): Boolean {
-            return roles.contains(role)
+        fun hasPermissions(tokenRoles: JsonArray, userRoles: JsonArray): Boolean {
+            var result = true
+            tokenRoles.forEach {
+                result = result && userRoles.contains(it)
+            }
+            return result
         }
 
         fun getResponse(code: Int, message: String, payload: JsonObject) =
