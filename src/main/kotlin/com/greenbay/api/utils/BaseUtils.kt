@@ -170,21 +170,23 @@ class BaseUtils {
             }
         }
 
-        fun execute2(
+        fun authExecute(
             task: String,
             requestBody: JsonObject,
             context: RoutingContext,
             inject: (usr: JsonObject, body: JsonObject, response: HttpServerResponse) -> Unit,
             vararg values: String
         ) {
-            logger.info("execute2($task) -->")
+            logger.info("executeAuth($task) -->")
             val response = context.response().apply {
                 statusCode = OK.code()
                 statusMessage = OK.reasonPhrase()
             }.putHeader(CONTENT_TYPE, APPLICATION_JSON)
             try {
 
+                logger.info("executeAuth($task) -->")
             } catch (ex: Exception) {
+                logger.error("executeAuth([${ex.message}]) -->")
                 response.end(getResponse(INTERNAL_SERVER_ERROR.code(), ex.message!!).encodePrettily())
             }
         }
@@ -223,13 +225,16 @@ class BaseUtils {
             inject: (usr: JsonObject, body: JsonObject, response: HttpServerResponse) -> Unit,
             values: String
         ) {
+            logger.info("noAuthExecute($task) -->")
             val response = rc.response().apply {
                 statusCode = OK.code()
                 statusMessage = OK.reasonPhrase()
             }.putHeader(CONTENT_TYPE, APPLICATION_JSON)
             try {
                 noAuthBodyHandler(task,rc.body().asJsonObject(),rc,inject,values)
+                logger.info("noAuthExecute($task) <--")
             } catch (e: Exception) {
+                logger.error("noAuthExecute(${e.message}) <--")
                 response.end(getResponse(INTERNAL_SERVER_ERROR.code(), "Error occurred, try again").encodePrettily())
             }
         }
@@ -251,7 +256,7 @@ class BaseUtils {
             inject: (usr: JsonObject, body: JsonObject, response: HttpServerResponse) -> Unit,
             vararg values: String
         ) {
-            logger.info("bodyHandler($task) -->")
+            logger.info("noAuthBodyHandler($task) -->")
             val response = rc.response().apply {
                 statusCode = OK.code()
                 statusMessage = OK.reasonPhrase()
@@ -264,12 +269,15 @@ class BaseUtils {
                         "Request body too large:[$bodySize]KBs"
                     ).encodePrettily()
                 )
+                logger.info("noAuthBodyHandler($task) <--")
+
             } else {
                 if (!hasFields(requestBody,*values)){
                     response.end(getResponse(BAD_REQUEST.code(),"Some fields are missing").encodePrettily())
                     return
                 }
                 inject(JsonObject.of("email",requestBody.getString("email")),requestBody,response)
+                logger.info("noAuthBodyHandler($task) <--")
             }
         }
 
@@ -281,7 +289,7 @@ class BaseUtils {
          * @author Jamie Omondi
          * @since 15/02/2023
          */
-        fun hasFields(body: JsonObject, vararg values: String): Boolean {
+        private fun hasFields(body: JsonObject, vararg values: String): Boolean {
             if (values.isEmpty())
                 return true
             if (body.isEmpty)
