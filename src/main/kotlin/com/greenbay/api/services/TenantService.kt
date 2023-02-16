@@ -44,15 +44,15 @@ open class TenantService : HouseService() {
     }
 
     private fun getAllTenants(rc: RoutingContext) {
-        execute("getAllTenants",rc,{usr, body, response ->
-            getDatabase().find(Collections.TENANTS.toString(), JsonObject(),{
+        execute("getAllTenants", rc, { usr, body, response ->
+            getDatabase().find(Collections.TENANTS.toString(), JsonObject(), {
                 logger.info("[createTenant]")
                 response.apply {
                     statusCode = OK.code()
                     statusMessage = OK.reasonPhrase()
                 }.putHeader(CONTENT_TYPE, APPLICATION_JSON)
-                    .end(getResponse("Successful",it).encodePrettily())
-            },{
+                    .end(getResponse("Successful", it).encodePrettily())
+            }, {
                 logger.error("[createTenant] ${it.message}")
                 response.apply {
                     statusCode = INTERNAL_SERVER_ERROR.code()
@@ -60,22 +60,24 @@ open class TenantService : HouseService() {
                 }.putHeader(CONTENT_TYPE, APPLICATION_JSON)
                     .end(getResponse("Error creating tenant try again").encodePrettily())
             })
-        },"admin","super-admin")
+        }, "admin", "super-admin")
     }
 
+
+    @GreenBayTask("updateTenant")
     private fun updateTenant(rc: RoutingContext) {
-        execute("updateTenant",rc,{usr, body, response ->
+        execute("updateTenant", rc, { usr, body, response ->
             val email = rc.request().getParam("email")
-            val qry = JsonObject.of("email",email)
-            val replacement = JsonObject.of("\$set",body)
-            getDatabase().findOneAndUpdate(Collections.TENANTS.toString(),qry,replacement,{
+            val qry = JsonObject.of("email", email)
+            val replacement = JsonObject.of("\$set", body)
+            getDatabase().findOneAndUpdate(Collections.TENANTS.toString(), qry, replacement, {
                 logger.info("[updateTenant]")
                 response.apply {
                     statusCode = OK.code()
                     statusMessage = OK.reasonPhrase()
                 }.putHeader(CONTENT_TYPE, APPLICATION_JSON)
-                    .end(getResponse("Successful",it).encodePrettily())
-            },{
+                    .end(getResponse("Successful", it).encodePrettily())
+            }, {
                 logger.error("[updateTenant] ${it.message}")
                 response.apply {
                     statusCode = INTERNAL_SERVER_ERROR.code()
@@ -83,21 +85,21 @@ open class TenantService : HouseService() {
                 }.putHeader(CONTENT_TYPE, APPLICATION_JSON)
                     .end(getResponse("Error updating tenant try again").encodePrettily())
             })
-        },"admin","super-admin")
+        }, "admin", "super-admin")
     }
 
     private fun deleteTenant(rc: RoutingContext) {
-        execute("deleteTenant",rc,{usr, body, response ->
+        execute("deleteTenant", rc, { usr, body, response ->
             val email = rc.request().getParam("email")
-            val qry = JsonObject.of("email",email)
-            getDatabase().findOneAndDelete(Collections.TENANTS.toString(),qry,{
+            val qry = JsonObject.of("email", email)
+            getDatabase().findOneAndDelete(Collections.TENANTS.toString(), qry, {
                 logger.info("[deleteTenant]")
                 response.apply {
                     statusCode = OK.code()
                     statusMessage = OK.reasonPhrase()
                 }.putHeader(CONTENT_TYPE, APPLICATION_JSON)
-                    .end(getResponse("Successful",it).encodePrettily())
-            },{
+                    .end(getResponse("Successful", it).encodePrettily())
+            }, {
                 logger.error("[deleteTenant] ${it.message}")
                 response.apply {
                     statusCode = INTERNAL_SERVER_ERROR.code()
@@ -105,7 +107,7 @@ open class TenantService : HouseService() {
                 }.putHeader(CONTENT_TYPE, APPLICATION_JSON)
                     .end(getResponse("Error deleting tenant try again").encodePrettily())
             })
-        },"admin","super-admin")
+        }, "admin", "super-admin")
     }
 
 }

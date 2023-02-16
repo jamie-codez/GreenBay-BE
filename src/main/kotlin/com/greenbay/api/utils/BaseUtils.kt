@@ -175,7 +175,7 @@ class BaseUtils {
             requestBody: JsonObject,
             context: RoutingContext,
             inject: (usr: JsonObject, body: JsonObject, response: HttpServerResponse) -> Unit,
-            vararg values: String
+            vararg values: String,
         ) {
             logger.info("executeAuth($task) -->")
             val response = context.response().apply {
@@ -193,7 +193,8 @@ class BaseUtils {
         }
 
 
-        fun authBodyHandler(
+
+        private fun authBodyHandler(
             task: String,
             body: JsonObject,
             accessToken: String,
@@ -222,7 +223,6 @@ class BaseUtils {
                 val claim = decodeJwtToken(accessToken)
                 val email = claim.getString("email")
                 val expires = claim.getString("expires")
-                val jwtRoles = claim.getJsonArray("roles")
                 val now = System.currentTimeMillis()
                 if (now > expires.toLong()) {
                     response.end(getResponse(UNAUTHORIZED.code(), "Access token expired").encodePrettily())
@@ -232,9 +232,11 @@ class BaseUtils {
                     val userRoles = usr.getJsonArray("roles")
                     if (!hasFields(body, *values)){
                         response.end(getResponse(NOT_FOUND.code(),"Some fields missing").encodePrettily())
+                        return@getUser
                     }
-                    if (!hasPermissions(jwtRoles,userRoles)){
+                    if (!hasPermissions(permissions,userRoles)){
                         response.end(getResponse(UNAUTHORIZED.code(),"Missing permissions").encodePrettily())
+                        return@getUser
                     }
                     inject(usr,body, response)
                 }, response)
@@ -242,7 +244,7 @@ class BaseUtils {
         }
 
 
-        fun decodeJwtToken(jwt: String): JsonObject {
+        private fun decodeJwtToken(jwt: String): JsonObject {
             try {
                 val decodedJWT = JWT.decode(jwt)
                 val verifier = JWT.require(Algorithm.HMAC256(System.getenv("GB_JWT_SECRET")))
@@ -250,8 +252,7 @@ class BaseUtils {
                 val verifiedJWT = verifier.verify(decodedJWT)
                 val email = verifiedJWT.subject
                 val expires = verifiedJWT.expiresAt
-                val roles = verifiedJWT.claims["roles"]
-                return JsonObject.of("email", email, "expires", expires, "roles", roles)
+                return JsonObject.of("email", email, "expires", expires)
             } catch (ex: Exception) {
                 throw GreenBayException(ex.message, ex)
             }
@@ -385,9 +386,9 @@ class BaseUtils {
          * @author Jamie Omondi
          * @since 15/02/2023
          */
-        fun hasPermissions(tokenRoles: JsonArray, userRoles: JsonArray): Boolean {
+        fun hasPermissions(roles: Array<out String>, userRoles: JsonArray): Boolean {
             var result = true
-            tokenRoles.forEach {
+            roles.forEach {
                 result = result && userRoles.contains(it)
             }
             return result
