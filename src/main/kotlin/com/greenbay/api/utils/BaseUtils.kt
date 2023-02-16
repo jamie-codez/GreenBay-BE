@@ -193,7 +193,6 @@ class BaseUtils {
         }
 
 
-
         private fun authBodyHandler(
             task: String,
             body: JsonObject,
@@ -230,15 +229,15 @@ class BaseUtils {
                 }
                 getUser(JsonObject.of("email", email), { usr ->
                     val userRoles = usr.getJsonArray("roles")
-                    if (!hasFields(body, *values)){
-                        response.end(getResponse(NOT_FOUND.code(),"Some fields missing").encodePrettily())
+                    if (!hasFields(body, *values)) {
+                        response.end(getResponse(NOT_FOUND.code(), "Some fields missing").encodePrettily())
                         return@getUser
                     }
-                    if (!hasPermissions("permissions",userRoles)){
-                        response.end(getResponse(UNAUTHORIZED.code(),"Missing permissions").encodePrettily())
+                    if (!hasPermissions("permissions", userRoles)) {
+                        response.end(getResponse(UNAUTHORIZED.code(), "Missing permissions").encodePrettily())
                         return@getUser
                     }
-                    inject(usr,body, response)
+                    inject(usr, body, response)
                 }, response)
             }
         }
@@ -262,7 +261,7 @@ class BaseUtils {
             database.findOne(Collections.USER_TBL.toString(), qry, JsonObject(), {
                 task(it)
             }, {
-                response.end(getResponse(INTERNAL_SERVER_ERROR.code(), "Error occurred try again.").encodePrettily())
+                response.end(getResponse( "Error occurred try again.").encodePrettily())
                 throw GreenBayException(it.message, it)
             })
         }
@@ -284,7 +283,6 @@ class BaseUtils {
                 }.putHeader(CONTENT_TYPE, APPLICATION_JSON)
                     .end(
                         getResponse(
-                            REQUEST_ENTITY_TOO_LARGE.code(),
                             "Request body too large: [${requestBody.encodePrettily().length}]"
                         ).encodePrettily()
                     )
@@ -312,7 +310,7 @@ class BaseUtils {
                 logger.info("noAuthExecute($task) <--")
             } catch (e: Exception) {
                 logger.error("noAuthExecute(${e.message}) <--")
-                response.end(getResponse(INTERNAL_SERVER_ERROR.code(), "Error occurred, try again").encodePrettily())
+                response.end(getResponse( "Error occurred, try again").encodePrettily())
             }
         }
 
@@ -342,7 +340,6 @@ class BaseUtils {
             if (bodySize > BODY_LIMIT) {
                 response.end(
                     getResponse(
-                        REQUEST_ENTITY_TOO_LARGE.code(),
                         "Request body too large:[$bodySize]KBs"
                     ).encodePrettily()
                 )
@@ -350,7 +347,7 @@ class BaseUtils {
 
             } else {
                 if (!hasFields(requestBody, *values)) {
-                    response.end(getResponse(BAD_REQUEST.code(), "Some fields are missing").encodePrettily())
+                    response.end(getResponse("Some fields are missing").encodePrettily())
                     return
                 }
                 inject(JsonObject.of("email", requestBody.getString("email")), requestBody, response)
@@ -394,13 +391,13 @@ class BaseUtils {
             return result
         }
 
-        fun getResponse(code: Int, message: String, payload: JsonObject) =
+        fun getResponse(message: String, payload: JsonObject) =
             JsonObject.of("message", message, "payload", payload)
 
-        fun getResponse(code: Int, message: String, payload: List<JsonObject>) =
+        fun getResponse(message: String, payload: List<JsonObject>) =
             JsonObject.of("message", message, "payload", payload)
 
-        fun getResponse(code: Int, message: String) = JsonObject.of("message", message)
+        fun getResponse(message: String) = JsonObject.of("message", message)
 
 
         @JvmStatic
