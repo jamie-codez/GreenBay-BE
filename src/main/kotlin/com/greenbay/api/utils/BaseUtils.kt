@@ -234,7 +234,7 @@ class BaseUtils {
                         response.end(getResponse(NOT_FOUND.code(),"Some fields missing").encodePrettily())
                         return@getUser
                     }
-                    if (!hasPermissions(permissions,userRoles)){
+                    if (!hasPermissions("permissions",userRoles)){
                         response.end(getResponse(UNAUTHORIZED.code(),"Missing permissions").encodePrettily())
                         return@getUser
                     }
@@ -386,7 +386,7 @@ class BaseUtils {
          * @author Jamie Omondi
          * @since 15/02/2023
          */
-        fun hasPermissions(roles: Array<out String>, userRoles: JsonArray): Boolean {
+        fun hasPermissions(roles: String, userRoles: JsonArray): Boolean {
             var result = true
             roles.forEach {
                 result = result && userRoles.contains(it)
